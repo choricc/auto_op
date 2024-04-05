@@ -130,7 +130,9 @@ def update_by_pk(count, resourceId):
         um.cursor.execute(sql)
 
 
-def get_count(count, data_source):
+def get_count(data_source):
+    H = today.strftime('%H')
+    count = int(H) * 12 - 10
     with UsingMysql(log_time=True) as um:
         sql = "select * from yunqiao_check where num < '%s' and data_source='%s'" % (count, data_source)
         um.cursor.execute(sql)
@@ -138,8 +140,6 @@ def get_count(count, data_source):
 def check_id(dic, token, poolcicd, count):
     b_time = today.strftime('%Y-%m-%d') + ' 00:00:00'
     e_time = tomorrow.strftime('%Y-%m-%d') + ' 00:00:00'
-    H = today.strftime('%H')
-    num = int(H) * 12
     url = 'http://172.16.21.225/portal/monitorAxios/device/metricQuery/metricQueryByDevResourceId'
     headers = {
         'content-type': 'application/json;charset=UTF-8',

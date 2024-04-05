@@ -1,35 +1,37 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# @Time    : 2023/4/9 17:55
-# @Author  : Lani
-# @File    : guitest.py
-
+import concurrent.futures
+import time
 from gooey import Gooey, GooeyParser
+import sys
 
 
-@Gooey(program_name="checkBoxTest")
-def gui_main():
-    parser = GooeyParser(description="checkBoxTest")
-    parser.add_argument("-cb", "--test1", widget="CheckBox", action="store_true", help="test1")
-    #
-    parser.add_argument(
-        '-f', '--foo',
-        metavar='Some Flag',
-        action='store_true',
-        help='I turn things on and off')
+@Gooey(progress_regex=r"^progress: (\d+)/(\d+)$",
+       progress_expr="x[0] / x[1] * 100",
+       disable_progress_bar_animation=True,
+       language='chinese')
+def main():
+    parser = GooeyParser(description="测试")
+    parser.add_argument('--token', type=str, help='f12获取token')
+    parser.add_argument('--pool', type=str, widget="Dropdown", choices=['江苏',
+                                                                        '甘肃',
+                                                                        '河北',
+                                                                        '天津',
+                                                                        '山西',
+                                                                        '内蒙古',
+                                                                        '广西',
+    args = parser.parse_args(sys.argv[1:])
 
-    args = parser.parse_args()
-    print(args)
-    if args.test1:
-        print("test 勾选了")
-    else:
-        print("test1 未勾选")
+def task(n):
+    print(f"开始任务 {n}")
+    time.sleep(n)
+    print(f"结束任务 {n}")
+    return n
 
-    if args.foo:
-        print("foo 勾选了")
-    else:
-        print("foo 未勾选")
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        futures = {executor.submit(task, i): i for i in range(10)}
+
+        for future in concurrent.futures.as_completed(futures):
+        print(f"任务 {futures[future]} 完成，结果：{future.result()}")
 
 
 if __name__ == "__main__":
-    gui_main()
+    sys.exit(main())
