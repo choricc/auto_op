@@ -20,8 +20,8 @@ class Auto_bubao(object):
             'Connection': 'keep-alive',
             'Content-Length': '77',
             'Content-Type': 'application/json;charset=UTF-8',
-            'Host': '10.251.3.100:8088',
-            'Referer': 'http://10.251.3.100:8088/',
+            'Host': '',
+            'Referer': '',
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203'
         }
 
@@ -31,7 +31,7 @@ class Auto_bubao(object):
         }
 
         s = requests.session()
-        login_url = 'http://10.251.3.100:8088/dpmon-integrate/login'
+        login_url = 'http://:8088/dpmon-integrate/login'
         response = s.post(login_url, headers=header, json=body)
         #print(response.text)
         json_data = json.loads(response.text)
@@ -41,7 +41,7 @@ class Auto_bubao(object):
         return token
 
     def get_num(self, token):
-        url = 'http://10.251.3.100:8088/check.txt'
+        url = 'http://:8088/check.txt'
         headers = {
 
             'content-type': 'application/json;charset=UTF-8',
@@ -58,7 +58,7 @@ class Auto_bubao(object):
         return count
 
     def bubao(self, token):
-        url = 'http://10.251.3.100:8088/dpmon-third-party/monResourceKafka/sendKafkaByDateTime'
+        url = 'http://:8088/dpmon-third-party/monResourceKafka/sendKafkaByDateTime'
         json_date = {
             'datatime': today
         }
@@ -69,8 +69,8 @@ class Auto_bubao(object):
             'Connection': 'keep-alive',
             'Content-Length': '77',
             'Content-Type': 'application/json;charset=UTF-8',
-            'Host': '10.251.3.100:8088',
-            'Referer': 'http://10.251.3.100:8088/',
+            'Host': ':8088',
+            'Referer': 'http://:8088/',
             'token': token,
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203',
         }
@@ -81,7 +81,7 @@ class Auto_bubao(object):
         print(json_data['time'])
 
     def check_num(self, token):
-        url = 'http://10.251.3.100:8088/dpmon-third-party/pdbOperationTrappingLog/getPageList'
+        url = 'http://:8088/dpmon-third-party/pdbOperationTrappingLog/getPageList'
         headers = {
             'content-type': 'application/json;charset=UTF-8',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203',
