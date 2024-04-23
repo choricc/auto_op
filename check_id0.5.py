@@ -167,7 +167,7 @@ def check_id(dic_cicd, token, poolcicd, numbers):
     count = int(H) * 12
     url = 'http://172.16.21.225/portal/monitorAxios/device/metricQuery/metricQueryByDevResourceId'
     headers = {
-        'content-type': 'application/json;charset=UTF-8',
+         'content-type': 'application/json;charset=UTF-8',
         'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67',
         'token': token
     }
