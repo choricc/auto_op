@@ -52,7 +52,7 @@ def choose_pool(poold):
             poolcicd.append(dic_pool.get(poolist[i]))
     return poolcicd
 def get_cicd(token, poolcicds):
-    url = 'http://172.16.21.225/portal/monitorAxios/device/adapter/getDevices'
+    url = 'http:///portal/monitorAxios/device/adapter/getDevices'
     headers = {
 
         'content-type': 'application/json;charset=UTF-8',
@@ -100,7 +100,7 @@ def check_id(dic_cicd, token, poolcicd, numbers):
     e_time = tomorrow.strftime('%Y-%m-%d') + ' 00:00:00'
     H = today.strftime('%H')
     count = int(H) * 12
-    url = 'http://172.16.21.225/portal/monitorAxios/device/metricQuery/metricQueryByDevResourceId'
+    url = 'http:///portal/monitorAxios/device/metricQuery/metricQueryByDevResourceId'
     headers = {
          'content-type': 'application/json;charset=UTF-8',
         'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67',
