@@ -5,8 +5,6 @@ import json
 from datetime import datetime, timedelta
 from gooey import Gooey, GooeyParser
 import sys
-from openpyxl import Workbook, load_workbook
-import os
 
 today = datetime.today()
 tomorrow = today + timedelta(days=1)
@@ -68,7 +66,7 @@ def get_cicd(token, poolcicds, choose_type):
     if choose_type == '云主机':
         for poolcicd in poolcicds:
             dic = {}
-            cicd_list = []
+            name_list = []
             for num in range(20):
                 json_data = {
                     "page":
@@ -84,7 +82,7 @@ def get_cicd(token, poolcicds, choose_type):
                             'devName': '',
                             'devType': "VmServer",
                             'devTypeGroup': "云资源",
-                            'deviceStatus': "",
+                            'deviceStatus': "运行",
                             'exactIp': 'false',
                             'hostServerIp': 'null',
                             'ipAddress': "",
@@ -102,14 +100,15 @@ def get_cicd(token, poolcicds, choose_type):
                 json_data = json.loads(response.text)
                 for i in range(len(json_data['data']['records'])):
                     key = json_data['data']['records'][i]['resourceId']
-                    value = json_data['data']['records'][i]['name']
-                    cicd_list.append(json_data['data']['records'][i]['ciCode'])
+                    value = json_data['data']['records'][i]['ciCode']
+                    name_list.append(json_data['data']['records'][i]['name'])
                     dic[key] = value
             print(len(dic))
-            check_id(dic, token, poolcicd, len(dic), cicd_list, choose_type)
+            check_id(dic, token, poolcicd, len(dic), name_list, choose_type)
     else:
         for poolcicd in poolcicds:
             dic = {}
+            name_list = []
             for num in range(20):
                 json_data = {
                     "page":
@@ -136,12 +135,11 @@ def get_cicd(token, poolcicds, choose_type):
                     value = json_data['data']['records'][i]['ciCode']
                     dic[key] = value
             print(len(dic))
-            cicd_list = []
-            check_id(dic, token, poolcicd, len(dic), cicd_list, choose_type)
+            check_id(dic, token, poolcicd, len(dic), name_list, choose_type)
         # return dic, count
 
 
-def check_id(dic_cicd, token, poolcicd, numbers, cicd_list, choose_type):
+def check_id(dic_cicd, token, poolcicd, numbers, name_list, choose_type):
     # ... （保留原有变量初始化和文件打开部分）...
     b_time = today.strftime('%Y-%m-%d') + ' 00:00:00'
     e_time = tomorrow.strftime('%Y-%m-%d') + ' 00:00:00'
@@ -164,46 +162,56 @@ def check_id(dic_cicd, token, poolcicd, numbers, cicd_list, choose_type):
         '6180578038500328': '青海'
     }
     value = pool_dic.get(poolcicd)
-    filename = str(value) + '.xlsx'
+    filename = str(value) + '.txt'
     k = 0
     i = 0
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = []
-        for key, value in dic_cicd.items():
-            cicd = cicd_list[k]
-            k += 1
-            future = executor.submit(
-                process_cicd_entry,
-                key,
-                value,
-                cicd,
-                b_time,
-                e_time,
-                url,
-                filename,
-                headers,
-                count,
-                choose_type
-            )
-            futures.append(future)
-        for future in concurrent.futures.as_completed(futures):
-            i += 1
-            print("progress: {}/{}".format(i, numbers))
-            sys.stdout.flush()
-            # result = future.result()
-            # print(result)
+    with open(filename, 'a+') as f:
+        f.truncate(0)
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = []
+            for key, value in dic_cicd.items():
+                if choose_type == '云主机':
+                    name = name_list[k]
+                    k += 1
+                else:
+                    name = ''
+                future = executor.submit(
+                    process_cicd_entry,
+                    key,
+                    value,
+                    name,
+                    b_time,
+                    e_time,
+                    url,
+                    filename,
+                    headers,
+                    count,
+                    choose_type
+                )
+                futures.append(future)
+            for future in concurrent.futures.as_completed(futures):
+                i += 1
+                print("progress: {}/{}".format(i, numbers))
+                sys.stdout.flush()
+                # result = future.result()
+                # print(result)
 
     # ... （保留文件关闭部分）...
 
 
-def process_cicd_entry(key, value, cicd, b_time, e_time, url, filename, headers, count, choose_type):
-    def fetch_data():
-        response = requests.post(url=url, headers=headers, json=json_data)
-        response.raise_for_status()
-        return json.loads(response.text)
-
+def process_cicd_entry(key, value, name, b_time, e_time, url, filename, headers, count, choose_type):
     max_retries = 5
     retry_count = 0
+    common_query_params = {
+        "beginTime": b_time,
+        "endTime": e_time,
+        "dataSource": ["31省"],
+        "0": "31省",
+        "metricNames": ["cpu_usage_percent"],
+        "0": "cpu_usage_percent",
+        "timeType": "ts"
+    }
+
     if choose_type == '云主机':
         json_data = {
             "page": {
@@ -212,42 +220,15 @@ def process_cicd_entry(key, value, cicd, b_time, e_time, url, filename, headers,
                 "total": 0
             },
             "query": {
-                "beginTime": b_time,
-                "ciCode": cicd,
-                "dataSource": [
-                    "31省"
-                ],
-                "0": "31省",
-                "endTime": e_time,
-                "devName": value,
+                **common_query_params,
+                "ciCode": value,
+                "devName": name,
                 "devType": "VmServer",
-                "maxVal": "",
-                "metricNames": [
-                    "cpu_usage_percent"
-                ],
-                "0": "cpu_usage_percent",
-                "valueRange": [
-                    'null',
-                    'null'
-                ],
+                "valueRange": ['null', 'null'],
                 "0": "null",
                 "1": "null"
             }
         }
-        data_dic = {}
-        while retry_count < max_retries:
-            try:
-                data = fetch_data()
-                if data['data']['total'] < count - 10:
-                    data_dic[key] = data['data']['total']
-                break
-            except requests.RequestException as e:
-                print("Error:", e)
-                retry_count += 1
-                print(f"Retrying... (Attempt {retry_count}/{max_retries})")
-                time.sleep(1)
-        # print(data_dic)
-        write_to_excel(data_dic, '云主机', filename)
     else:
         json_data = {
             "page": {
@@ -255,61 +236,145 @@ def process_cicd_entry(key, value, cicd, b_time, e_time, url, filename, headers,
                 "size": 10
             },
             "query": {
-                "beginTime": b_time,
+                **common_query_params,
                 "ciCode": value,
-                "dataSource": [
-                    "31省"
-                ],
-                "0": "31省",
-                "endTime": e_time,
                 "maxVal": "",
-                "metricNames": [
-                    "cpu_usage_percent"
-                ],
-                "0": "cpu_usage_percent",
                 "minVal": "",
-                "orderBy": "",
-                "timeType": "ts"
+                "orderBy": ""
             }
         }
 
-        data_dic = {}
-        while retry_count < max_retries:
-            try:
-                data = fetch_data()
-                if data['data']['total'] < count - 10:
-                    data_dic[key] = data['data']['total']
-                break
-            except requests.RequestException as e:
-                print("Error:", e)
-                retry_count += 1
-                print(f"Retrying... (Attempt {retry_count}/{max_retries})")
-                time.sleep(1)
-        # print(data_dic)
-        write_to_excel(data_dic, '物理机', filename)
-    # 不再需要单独关闭文件，因为每次写入都在 `with open` 语句中完成
+    while retry_count < max_retries:
+        try:
+            response = requests.post(url=url, headers=headers, json=json_data)
+            response.raise_for_status()
+            data = json.loads(response.text)
+            if data['data']['total'] < count - 10:
+                with open(filename, 'a+') as f:
+                    f.write(key + '\t')
+                    f.write(str(data['data']['total']) + '\n')
+            break
+        except requests.RequestException as e:
+            print("Error:", e)
+            retry_count += 1
+            print(f"Retrying... (Attempt {retry_count}/{max_retries})")
+            time.sleep(1)
 
 
-def write_to_excel(data_dic, target_sheet_name, filename):
-    if not os.path.isfile(filename):
-        # 文件不存在，创建新文件
-        wb = Workbook()
-        wb.active.title = '物理机'
-        wb.create_sheet('云主机')
-        wb.save(filename)
-    else:
-        # 文件已存在，打开工作簿
-        wb = load_workbook(filename)
-
-    # 清空并写入数据到指定工作表
-    ws = wb[target_sheet_name]  # 获取指定工作表
-    ws.delete_rows(1, ws.max_row)  # 清空工作表数据
-
-    for row_num, (key, value) in enumerate(data_dic.items(), start=1):  # 从第1行开始写入
-        ws.cell(row=row_num, column=1, value=key)
-        ws.cell(row=row_num, column=2, value=value)
-
-    wb.save(filename)
+# def process_cicd_entry(key, value, cicd, b_time, e_time, url, filename, headers, count, choose_type):
+#     def fetch_data():
+#         response = requests.post(url=url, headers=headers, json=json_data)
+#         response.raise_for_status()
+#         return json.loads(response.text)
+#
+#     max_retries = 5
+#     retry_count = 0
+#     if choose_type == '云主机':
+#         json_data = {
+#             "page": {
+#                 "current": 1,
+#                 "size": 10,
+#                 "total": 0
+#             },
+#             "query": {
+#                 "beginTime": b_time,
+#                 "ciCode": cicd,
+#                 "dataSource": [
+#                     "31省"
+#                 ],
+#                 "0": "31省",
+#                 "endTime": e_time,
+#                 "devName": value,
+#                 "devType": "VmServer",
+#                 "maxVal": "",
+#                 "metricNames": [
+#                     "cpu_usage_percent"
+#                 ],
+#                 "0": "cpu_usage_percent",
+#                 "valueRange": [
+#                     'null',
+#                     'null'
+#                 ],
+#                 "0": "null",
+#                 "1": "null"
+#             }
+#         }
+#         data_dic = {}
+#         while retry_count < max_retries:
+#             try:
+#                 data = fetch_data()
+#                 if data['data']['total'] < count - 10:
+#                     data_dic[key] = data['data']['total']
+#                 break
+#             except requests.RequestException as e:
+#                 print("Error:", e)
+#                 retry_count += 1
+#                 print(f"Retrying... (Attempt {retry_count}/{max_retries})")
+#                 time.sleep(1)
+#         # print(data_dic)
+#         write_to_excel(data_dic, '云主机', filename)
+#     else:
+#         json_data = {
+#             "page": {
+#                 "current": 1,
+#                 "size": 10
+#             },
+#             "query": {
+#                 "beginTime": b_time,
+#                 "ciCode": value,
+#                 "dataSource": [
+#                     "31省"
+#                 ],
+#                 "0": "31省",
+#                 "endTime": e_time,
+#                 "maxVal": "",
+#                 "metricNames": [
+#                     "cpu_usage_percent"
+#                 ],
+#                 "0": "cpu_usage_percent",
+#                 "minVal": "",
+#                 "orderBy": "",
+#                 "timeType": "ts"
+#             }
+#         }
+#
+#         data_dic = {}
+#         while retry_count < max_retries:
+#             try:
+#                 data = fetch_data()
+#                 if data['data']['total'] < count - 10:
+#                     data_dic[key] = data['data']['total']
+#                 break
+#             except requests.RequestException as e:
+#                 print("Error:", e)
+#                 retry_count += 1
+#                 print(f"Retrying... (Attempt {retry_count}/{max_retries})")
+#                 time.sleep(1)
+#         # print(data_dic)
+#         write_to_excel(data_dic, '物理机', filename)
+#     # 不再需要单独关闭文件，因为每次写入都在 `with open` 语句中完成
+#
+#
+# def write_to_excel(data_dic, target_sheet_name, filename):
+#     if not os.path.isfile(filename):
+#         # 文件不存在，创建新文件
+#         wb = Workbook()
+#         wb.active.title = '物理机'
+#         wb.create_sheet('云主机')
+#         wb.save(filename)
+#     else:
+#         # 文件已存在，打开工作簿
+#         wb = load_workbook(filename)
+#
+#     # 清空并写入数据到指定工作表
+#     ws = wb[target_sheet_name]  # 获取指定工作表
+#     ws.delete_rows(1, ws.max_row)  # 清空工作表数据
+#
+#     for row_num, (key, value) in enumerate(data_dic.items(), start=1):  # 从第1行开始写入
+#         ws.cell(row=row_num, column=1, value=key)
+#         ws.cell(row=row_num, column=2, value=value)
+#
+#     wb.save(filename)
 
 
 if __name__ == "__main__":
